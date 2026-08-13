@@ -1,0 +1,9 @@
+node_modules/
+.env
+
+# 內部文件與分析結果不進版控 —— 裡面有客戶名稱、交涉內容與報價。
+# 要 demo 請用 samples/ 的假資料：npm run seed
+data/
+runs/
+
+.DS_Store

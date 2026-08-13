@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>交接銜接缺口分析</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">⇄</span>
+      <div>
+        <h1>交接銜接缺口分析</h1>
+        <p>JD × 產品架構 × 客戶名單 × 交涉紀錄 — 找出交接會出事的地方</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <label class="field inline">
+        <span>模型</span>
+        <select id="model-select"></select>
+      </label>
+      <span id="key-status" class="pill pill-muted">檢查中…</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <div class="panel-head">
+          <h2>文件庫</h2>
+          <div class="panel-actions">
+            <button id="select-all" class="link-btn" type="button">全選</button>
+            <button id="select-none" class="link-btn" type="button">全不選</button>
+          </div>
+        </div>
+        <p class="panel-note" id="data-root"></p>
+        <div id="buckets"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h2>分析紀錄</h2></div>
+        <div id="runs" class="runs"><p class="empty">還沒有分析紀錄</p></div>
+      </section>
+    </aside>
+
+    <section class="content">
+      <div class="panel setup">
+        <div class="panel-head"><h2>分析設定</h2></div>
+        <div class="setup-grid">
+          <label class="field">
+            <span>交接背景 <em>選填</em></span>
+            <textarea id="context" rows="3" placeholder="例：王小明 8/31 離職，客戶與 JD 交接給李大華（到職 3 個月，無此產業經驗）。北區三家企業客戶正在議約。"></textarea>
+          </label>
+          <label class="field">
+            <span>特別聚焦 <em>選填</em></span>
+            <input id="focus" type="text" placeholder="例：只看營收前五大客戶的交接風險">
+          </label>
+        </div>
+        <div class="setup-foot">
+          <span id="selection-summary" class="muted"></span>
+          <button id="run" class="primary" type="button">執行缺口分析</button>
+        </div>
+      </div>
+
+      <div id="status" class="status" hidden></div>
+      <div id="result" class="result"></div>
+    </section>
+  </main>
+
+  <button id="chat-fab" class="chat-fab" type="button">
+    <span aria-hidden="true">💬</span> 向文件提問
+  </button>
+
+  <section id="chat" class="chat" hidden aria-label="向文件提問">
+    <header class="chat-head">
+      <div>
+        <strong>向文件提問</strong>
+        <div id="chat-scope" class="chat-scope"></div>
+      </div>
+      <div class="chat-head-btns">
+        <button id="chat-clear" class="link-btn" type="button">清除對話</button>
+        <button id="chat-close" class="icon-btn" type="button" aria-label="關閉">×</button>
+      </div>
+    </header>
+
+    <div id="chat-log" class="chat-log"></div>
+
+    <div class="chat-foot">
+      <div id="chat-suggest" class="chat-suggest"></div>
+      <form id="chat-form" class="chat-input">
+        <textarea id="chat-text" rows="1" placeholder="問一句…（Enter 送出，Shift+Enter 換行）"></textarea>
+        <button id="chat-send" class="primary" type="submit">送出</button>
+      </form>
+    </div>
+  </section>
+
+  <input id="file-input" type="file" multiple hidden>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

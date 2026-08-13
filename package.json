@@ -1,0 +1,18 @@
+{
+  "name": "aimon-handover",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "輕量級交接銜接缺口分析系統 — JD × 內部文件 × Gemini",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "seed": "node scripts/seed.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
