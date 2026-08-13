@@ -34,6 +34,7 @@ const state = {
   currentRunId: null,
   busy: false,
   chat: { messages: [], busy: false, suggestions: [] },
+  collapsed: new Set(),   // 收合中的區塊 id；跨 render 保留，切換紀錄不會被重設
 };
 
 const SEVERITY_LABEL = { high: '高', medium: '中', low: '低' };
@@ -314,6 +315,12 @@ function renderRun(run) {
   ].join('');
 
   el.result.querySelector('[data-export]')?.addEventListener('click', () => exportMarkdown(run));
+  el.result.querySelector('[data-toggle-all]')?.addEventListener('click', () => {
+    const sections = [...el.result.querySelectorAll('details[data-section]')];
+    const collapse = sections.some((d) => d.open);   // 只要還有展開的就全收，否則全開
+    sections.forEach((d) => { d.open = !collapse; });
+  });
+  syncToggleAllLabel();
   el.result.querySelector('[data-copy]')?.addEventListener('click', async (ev) => {
     await navigator.clipboard.writeText(toMarkdown(run));
     ev.target.textContent = '已複製 ✓';
@@ -328,6 +335,25 @@ function renderRun(run) {
   renderChat({ keepScroll: true });
 }
 
+function syncToggleAllLabel() {
+  const btn = el.result.querySelector('[data-toggle-all]');
+  if (!btn) return;
+  const sections = [...el.result.querySelectorAll('details[data-section]')];
+  btn.textContent = sections.some((d) => d.open) ? '全部收合' : '全部展開';
+}
+
+/** 可收合的結果區塊。用原生 details/summary，鍵盤操作與無障礙都不用自己實作。 */
+function section(id, title, bodyHtml) {
+  return `
+  <details class="panel section" data-section="${esc(id)}"${state.collapsed.has(id) ? '' : ' open'}>
+    <summary class="panel-head section-head">
+      <h2>${esc(title)}</h2>
+      <span class="chev" aria-hidden="true"></span>
+    </summary>
+    <div class="section-body">${bodyHtml}</div>
+  </details>`;
+}
+
 function readinessPanel(run, r, gaps) {
   const score = Number(r.readiness?.score ?? 0);
   const color = score >= 70 ? 'var(--low)' : score >= 40 ? 'var(--medium)' : 'var(--high)';
@@ -340,6 +366,7 @@ function readinessPanel(run, r, gaps) {
     <div class="result-head">
       <div class="panel-head" style="margin:0"><h2>交接準備度</h2></div>
       <div class="result-tools">
+        <button class="ghost-btn" data-toggle-all type="button"></button>
         <button class="ghost-btn" data-copy type="button">複製 Markdown</button>
         <button class="ghost-btn" data-export type="button">下載 .md</button>
       </div>
@@ -363,13 +390,9 @@ function readinessPanel(run, r, gaps) {
 }
 
 function gapsPanel(gaps) {
-  if (!gaps.length) {
-    return '<div class="panel"><div class="panel-head"><h2>缺口</h2></div><p class="empty">沒有找到缺口。</p></div>';
-  }
+  if (!gaps.length) return section('gaps', '銜接缺口', '<p class="empty">沒有找到缺口。</p>');
 
-  return `
-  <div class="panel">
-    <div class="panel-head"><h2>銜接缺口 · ${gaps.length} 項</h2></div>
+  return section('gaps', `銜接缺口 · ${gaps.length} 項`, `
     <div class="gap-list">
       ${gaps.map((g) => `
         <article class="gap ${esc(g.severity)}">
@@ -387,15 +410,12 @@ function gapsPanel(gaps) {
           ${(g.evidence ?? []).length ? `<ul class="evidence">${g.evidence.map((e) => `
             <li><code>${esc(e.source)}</code>${esc(e.detail)}</li>`).join('')}</ul>` : ''}
         </article>`).join('')}
-    </div>
-  </div>`;
+    </div>`);
 }
 
 function customersPanel(customers) {
   if (!customers.length) return '';
-  return `
-  <div class="panel">
-    <div class="panel-head"><h2>客戶覆蓋盤點 · ${customers.length} 家</h2></div>
+  return section('customers', `客戶覆蓋盤點 · ${customers.length} 家`, `
     <div class="table-scroll">
       <table class="customers">
         <thead><tr>
@@ -413,8 +433,7 @@ function customersPanel(customers) {
             </tr>`).join('')}
         </tbody>
       </table>
-    </div>
-  </div>`;
+    </div>`);
 }
 
 function listCell(items) {
@@ -424,24 +443,19 @@ function listCell(items) {
 
 function docsPanel(docs) {
   if (!docs.length) return '';
-  return `
-  <div class="panel">
-    <div class="panel-head"><h2>交接前必須補齊的文件 · ${docs.length} 份</h2></div>
+  return section('docs', `交接前必須補齊的文件 · ${docs.length} 份`, `
     <div class="doc-list">
       ${docs.map((d) => `
         <div class="doc-item">
           <strong>${esc(d.what)}</strong>
           <span>為什麼需要：${esc(d.why)}　·　哪裡拿：${esc(d.where_to_get)}</span>
         </div>`).join('')}
-    </div>
-  </div>`;
+    </div>`);
 }
 
 function checklistPanel(items) {
   if (!items.length) return '';
-  return `
-  <div class="panel">
-    <div class="panel-head"><h2>交接檢查清單</h2></div>
+  return section('checklist', `交接檢查清單 · ${items.length} 項`, `
     <ul class="checklist">
       ${items.map((it, i) => `
         <li>
@@ -452,16 +466,13 @@ function checklistPanel(items) {
           </div>
           <span class="pill pill-muted">${esc(it.owner)}</span>
         </li>`).join('')}
-    </ul>
-  </div>`;
+    </ul>`);
 }
 
 function inputsPanel(run) {
   const inputs = run.inputs ?? [];
   const skipped = run.skipped ?? [];
-  return `
-  <div class="panel">
-    <div class="panel-head"><h2>本次分析依據</h2></div>
+  return section('inputs', `本次分析依據 · ${inputs.length} 份文件`, `
     <p class="footnote">
       ${inputs.length} 份文件：${inputs.map((i) => `<code>${esc(i.bucket)}/${esc(i.name)}</code>${i.truncated ? '（截斷）' : ''}`).join('、') || '—'}
     </p>
@@ -469,8 +480,7 @@ function inputsPanel(run) {
     <p class="footnote">
       tokens：prompt ${run.usage?.promptTokens ?? '—'} / output ${run.usage?.outputTokens ?? '—'}
       · 紀錄 id <code>${esc(run.id)}</code>
-    </p>
-  </div>`;
+    </p>`);
 }
 
 // ---------------------------------------------------------------------------
@@ -805,6 +815,15 @@ function bindEvents() {
     const files = [...(ev.dataTransfer?.files ?? [])];
     if (files.length) await uploadFiles(bucket.dataset.bucket, files);
   });
+
+  // toggle 事件不會冒泡，要用捕獲階段接。收合狀態記在 state，重繪或切換紀錄都保留。
+  el.result.addEventListener('toggle', (ev) => {
+    const id = ev.target?.dataset?.section;
+    if (!id) return;
+    if (ev.target.open) state.collapsed.delete(id);
+    else state.collapsed.add(id);
+    syncToggleAllLabel();
+  }, true);
 
   // --- 提問視窗 ---
   el.chatFab.addEventListener('click', () => openChat());
